@@ -94,13 +94,22 @@ func (q *Queries) ListAccount(ctx context.Context, limit int32, offset int32) ([
 	return items, nil
 }
 
-const updateAccount = `-- name: UpdateAccount :exec
+const updateAccount = `-- name: UpdateAccount :one
 UPDATE accounts
-set balance = $2
+SET balance = $2
 WHERE id = $1
+RETURNING id, owner, balance, currency, created_at
 `
 
-func (q *Queries) UpdateAccount(ctx context.Context, iD int64, balance int64) error {
-	_, err := q.db.ExecContext(ctx, updateAccount, iD, balance)
-	return err
+func (q *Queries) UpdateAccount(ctx context.Context, iD int64, balance int64) (Account, error) {
+	row := q.db.QueryRowContext(ctx, updateAccount, iD, balance)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.Owner,
+		&i.Balance,
+		&i.Currency,
+		&i.CreatedAt,
+	)
+	return i, err
 }
